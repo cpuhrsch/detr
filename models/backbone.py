@@ -50,7 +50,11 @@ class FrozenBatchNorm2d(torch.nn.Module):
         scale = w * (rv + eps).rsqrt()
         bias = b - rm * scale
         # TODO: Support torch.Tensor for NestedTensor.__mul__
-        return x * scale + bias
+        result =  x * scale + bias
+        # print('result.nested_size()')
+        # print(result.nested_size())
+        # import pdb; pdb.set_trace().seu
+        return result.squeeze(1)
 
 
 class BackboneBase(nn.Module):
