@@ -59,6 +59,7 @@ class DETR(nn.Module):
             samples = NestedTensor.from_tensor_list(samples)
         features, pos = self.backbone(samples)
 
+        print("HBDEEEEEE")
         src, mask = features[-1].decompose()
         hs = self.transformer(self.input_proj(src), mask, self.query_embed.weight, pos[-1])[0]
 
