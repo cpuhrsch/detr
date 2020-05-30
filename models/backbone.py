@@ -67,11 +67,15 @@ class BackboneBase(nn.Module):
         self.num_channels = num_channels
 
     def forward(self, tensor_list):
-        xs = self.body(tensor_list.tensors)
-        out = OrderedDict()
-        for name, x in xs.items():
-            mask = F.interpolate(tensor_list.mask[None].float(), size=x.shape[-2:]).bool()[0]
-            out[name] = NestedTensor(x, mask)
+        print('type(tensor_list)')
+        print(type(tensor_list))
+        print(tensor_list.nested_size())
+        out = self.body(tensor_list)
+        import pdb; pdb.set_trace()
+        # out = OrderedDict()
+        # for name, x in xs.items():
+        #     mask = F.interpolate(tensor_list.mask[None].float(), size=x.shape[-2:]).bool()[0]
+        #     out[name] = NestedTensor(x, mask)
         return out
 
 
