@@ -25,6 +25,7 @@ class PositionEmbeddingSine(nn.Module):
 
     def forward(self, tensor_list):
         x, mask = tensor_list.to_tensor_mask(mask_dim=tensor_list.dim())
+        mask = (mask.sum(1) / mask.size(1)).bool()
         print('x.size()')
         print(x.size())
         print('mask.size()')

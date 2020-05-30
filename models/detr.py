@@ -62,7 +62,8 @@ class DETR(nn.Module):
         features, pos = self.backbone(samples)
 
         print("HBDEEEEEE")
-        src, mask = features[-1].decompose()
+        src, mask = features[-1].to_tensor_mask()
+        mask = (mask.sum(1) / mask.size(1)).bool()
         hs = self.transformer(self.input_proj(src), mask, self.query_embed.weight, pos[-1])[0]
 
         outputs_class = self.class_embed(hs)
