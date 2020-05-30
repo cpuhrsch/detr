@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from torch import nn
 
 from util import box_ops
-from util.misc import (NestedTensor, accuracy, get_world_size, interpolate,
+from util.misc import (accuracy, get_world_size, interpolate,
                        is_dist_avail_and_initialized)
 
 from .backbone import build_backbone
@@ -15,6 +15,8 @@ from .matcher import build_matcher
 from .segmentation import (DETRsegm, PostProcessPanoptic, PostProcessSegm,
                            dice_loss, sigmoid_focal_loss)
 from .transformer import build_transformer
+
+import nestedtensor
 
 
 class DETR(nn.Module):
@@ -40,7 +42,7 @@ class DETR(nn.Module):
         self.backbone = backbone
         self.aux_loss = aux_loss
 
-    def forward(self, samples: NestedTensor):
+    def forward(self, samples):
         """ The forward expects a NestedTensor, which consists of:
                - samples.tensor: batched images, of shape [batch_size x 3 x H x W]
                - samples.mask: a binary mask of shape [batch_size x H x W], containing 1 on padded pixels
@@ -55,8 +57,8 @@ class DETR(nn.Module):
                - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
                                 dictionnaries containing the two above keys for each decoder layer.
         """
-        if not isinstance(samples, NestedTensor):
-            samples = NestedTensor.from_tensor_list(samples)
+        if not isinstance(samples, nestedtensor.NestedTensor):
+            samples = nestedtensor.nested_tensor(samples)
         features, pos = self.backbone(samples)
 
         print("HBDEEEEEE")

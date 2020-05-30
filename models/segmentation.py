@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from PIL import Image
 
 import util.box_ops as box_ops
-from util.misc import NestedTensor, interpolate
+from util.misc import interpolate
 
 try:
     from panopticapi.utils import id2rgb, rgb2id
@@ -32,7 +32,7 @@ class DETRsegm(nn.Module):
         self.bbox_attention = MHAttentionMap(hidden_dim, hidden_dim, nheads, dropout=0)
         self.mask_head = MaskHeadSmallConv(hidden_dim + nheads, [1024, 512, 256], hidden_dim)
 
-    def forward(self, samples: NestedTensor):
+    def forward(self, samples):
         if not isinstance(samples, NestedTensor):
             samples = NestedTensor.from_tensor_list(samples)
         features, pos = self.detr.backbone(samples)
