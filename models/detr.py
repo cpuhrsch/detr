@@ -59,7 +59,8 @@ class DETR(nn.Module):
         """
         if not isinstance(samples, nestedtensor.NestedTensor):
             samples = nestedtensor.nested_tensor(samples)
-        features, pos = self.backbone(samples)
+        features_, pos = self.backbone(samples)
+        features = nestedtensor.nested_tensor(features_)
         # TODO: this is a list, why?
         print('type(features)')
         print(type(features))
@@ -68,8 +69,11 @@ class DETR(nn.Module):
         # src, mask = features[-1].to_tensor_mask(mask_dim=features[-1].dim())
         # mask = mask.prod(1)
         input_proj_features = self.input_proj(features)
+        print("1DADAD")
         hs = []
+        # TODO: This indexing fails at some point
         for features_i_, pos_i_ in zip(input_proj_features[-1].unbind(), pos[-1].unbind()):
+            print("2DADAD")
             features_i = features_i_.unsqueeze(0)
             pos_i = pos_i_.unsqueeze(0)
             hs_i = self.transformer(features_i, None, self.query_embed.weight, pos_i)[0]
@@ -77,7 +81,7 @@ class DETR(nn.Module):
         hs = nestedtensor.nested_tensor(hs)
         outputs_class = self.class_embed(hs)
         outputs_coord = self.bbox_embed(hs).sigmoid()
-        # TODO: This indexing fails at some point
+        print("DADAD")
         out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
         if self.aux_loss:
             out['aux_outputs'] = [{'pred_logits': a, 'pred_boxes': b}
