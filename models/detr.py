@@ -70,21 +70,13 @@ class DETR(nn.Module):
             pos_i = pos_i_.unsqueeze(0)
             hs_i = self.transformer(self.input_proj(features_i), None, self.query_embed.weight, pos_i)[0]
             hs.append(hs_i)
-
-        out_tmp = []
-        for hs_i in hs:
-            outputs_class = self.class_embed(hs_i)
-            outputs_coord = self.bbox_embed(hs_i).sigmoid()
-            out_i = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
-            if self.aux_loss:
-                out_i['aux_outputs'] = [{'pred_logits': a, 'pred_boxes': b}
-                                  for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
-            out_tmp.append(out_i)
-        out = {}
-        out['pred_logits'] = torch.cat(tuple(out_i['pred_logits'] for out_i in out_tmp))
-        out['pred_boxes'] = torch.cat(tuple(out_i['pred_boxes'] for out_i in out_tmp))
+        hs = nestedtensor.nested_tensor(hs)
+        outputs_class = self.class_embed(hs)
+        outputs_coord = self.bbox_embed(hs).sigmoid()
+        out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
         if self.aux_loss:
-            raise RuntimeError("Not implemented")
+            out['aux_outputs'] = [{'pred_logits': a, 'pred_boxes': b}
+                          for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
         return out
 
 
