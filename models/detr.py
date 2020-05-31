@@ -60,19 +60,24 @@ class DETR(nn.Module):
         if not isinstance(samples, nestedtensor.NestedTensor):
             samples = nestedtensor.nested_tensor(samples)
         features, pos = self.backbone(samples)
+        # TODO: this is a list, why?
+        print('type(features)')
+        print(type(features))
 
         print("HBDEEEEEE")
         # src, mask = features[-1].to_tensor_mask(mask_dim=features[-1].dim())
         # mask = mask.prod(1)
+        input_proj_features = self.input_proj(features)
         hs = []
-        for features_i_, pos_i_ in zip(features[-1].unbind(), pos[-1].unbind()):
+        for features_i_, pos_i_ in zip(input_proj_features[-1].unbind(), pos[-1].unbind()):
             features_i = features_i_.unsqueeze(0)
             pos_i = pos_i_.unsqueeze(0)
-            hs_i = self.transformer(self.input_proj(features_i), None, self.query_embed.weight, pos_i)[0]
+            hs_i = self.transformer(features_i, None, self.query_embed.weight, pos_i)[0]
             hs.append(hs_i)
         hs = nestedtensor.nested_tensor(hs)
         outputs_class = self.class_embed(hs)
         outputs_coord = self.bbox_embed(hs).sigmoid()
+        # TODO: This indexing fails at some point
         out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
         if self.aux_loss:
             out['aux_outputs'] = [{'pred_logits': a, 'pred_boxes': b}
@@ -297,7 +302,9 @@ class MLP(nn.Module):
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
+            print("i: " , i, " layer: " , layer)
             x = F.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
+        print("DONE")
         return x
 
 
