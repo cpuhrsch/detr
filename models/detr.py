@@ -62,16 +62,26 @@ class DETR(nn.Module):
         features, pos = self.backbone(samples)
 
         print("HBDEEEEEE")
-        src, mask = features[-1].to_tensor_mask(mask_dim=features[-1].dim())
-        mask = mask.prod(1)
-        hs = self.transformer(self.input_proj(src), mask, self.query_embed.weight, pos[-1])[0]
+        # src, mask = features[-1].to_tensor_mask(mask_dim=features[-1].dim())
+        # mask = mask.prod(1)
+        out_tmp = []
+        for features_i_, pos_i_ in zip(features[-1].unbind(), pos[-1].unbind()):
+            features_i = features_i_.unsqueeze(0)
+            pos_i = pos_i_.unsqueeze(0)
+            hs_i = self.transformer(self.input_proj(features_i), None, self.query_embed.weight, pos_i)[0]
 
-        outputs_class = self.class_embed(hs)
-        outputs_coord = self.bbox_embed(hs).sigmoid()
-        out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
-        if self.aux_loss:
-            out['aux_outputs'] = [{'pred_logits': a, 'pred_boxes': b}
+            outputs_class = self.class_embed(hs_i)
+            outputs_coord = self.bbox_embed(hs_i).sigmoid()
+            out_i = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
+            if self.aux_loss:
+                out_i['aux_outputs'] = [{'pred_logits': a, 'pred_boxes': b}
                                   for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
+            out_tmp.append(out_i)
+        out = {}
+        out['pred_logits'] = torch.cat(tuple(out_i['pred_logits'] for out_i in out_tmp))
+        out['pred_boxes'] = torch.cat(tuple(out_i['pred_boxes'] for out_i in out_tmp))
+        if self.aux_loss:
+            raise RuntimeError("Not implemented")
         return out
 
 
