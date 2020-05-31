@@ -64,12 +64,15 @@ class DETR(nn.Module):
         print("HBDEEEEEE")
         # src, mask = features[-1].to_tensor_mask(mask_dim=features[-1].dim())
         # mask = mask.prod(1)
-        out_tmp = []
+        hs = []
         for features_i_, pos_i_ in zip(features[-1].unbind(), pos[-1].unbind()):
             features_i = features_i_.unsqueeze(0)
             pos_i = pos_i_.unsqueeze(0)
             hs_i = self.transformer(self.input_proj(features_i), None, self.query_embed.weight, pos_i)[0]
+            hs.append(hs_i)
 
+        out_tmp = []
+        for hs_i in hs:
             outputs_class = self.class_embed(hs_i)
             outputs_coord = self.bbox_embed(hs_i).sigmoid()
             out_i = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
