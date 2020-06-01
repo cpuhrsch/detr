@@ -60,27 +60,29 @@ class DETR(nn.Module):
         if not isinstance(samples, nestedtensor.NestedTensor):
             samples = nestedtensor.nested_tensor(samples)
         features_, pos = self.backbone(samples)
-        features = nestedtensor.nested_tensor(features_)
         # TODO: this is a list, why?
-        print('type(features)')
-        print(type(features))
+        # print('type(features)')
+        # print(type(features))
 
         print("HBDEEEEEE")
         # src, mask = features[-1].to_tensor_mask(mask_dim=features[-1].dim())
         # mask = mask.prod(1)
+        features = nestedtensor.nested_tensor(features_[-1])
         input_proj_features = self.input_proj(features)
         print("1DADAD")
         hs = []
         # TODO: This indexing fails at some point
-        for features_i_, pos_i_ in zip(input_proj_features[-1].unbind(), pos[-1].unbind()):
+        for features_i_, pos_i_ in zip(input_proj_features.unbind(), pos[-1].unbind()):
             print("2DADAD")
             features_i = features_i_.unsqueeze(0)
             pos_i = pos_i_.unsqueeze(0)
             hs_i = self.transformer(features_i, None, self.query_embed.weight, pos_i)[0]
-            hs.append(hs_i)
+            import pdb; pdb.set_trace()
+            hs.append(hs_i.squeeze(0))
         hs = nestedtensor.nested_tensor(hs)
         outputs_class = self.class_embed(hs)
         outputs_coord = self.bbox_embed(hs).sigmoid()
+        import pdb; pdb.set_trace()
         print("DADAD")
         out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
         if self.aux_loss:
