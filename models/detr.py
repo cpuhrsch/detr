@@ -77,18 +77,20 @@ class DETR(nn.Module):
             features_i = features_i_.unsqueeze(0)
             pos_i = pos_i_.unsqueeze(0)
             hs_i = self.transformer(features_i, None, self.query_embed.weight, pos_i)[0]
-            hs.append(hs_i.squeeze(1))
-        hs = nestedtensor.nested_tensor(hs)
-        outputs_class = self.class_embed(hs)
-        outputs_coord = self.bbox_embed(hs).sigmoid()
-        import pdb; pdb.set_trace()
+            # hs.append(hs_i.squeeze(1))
+            hs.append(hs_i)
+        # hs = nestedtensor.nested_tensor(hs)
+        hs = torch.cat(hs, dim=1)
+        outputs_class = self.class_embed(hs)# .to_tensor()
+        outputs_coord = self.bbox_embed(hs)# .sigmoid().to_tensor()
         print("DADAD")
-        # out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
-        out = {'pred_logits': outputs_class.to_tensor(), 'pred_boxes': outputs_coord.to_tensor()}
+        out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
+        # out = {'pred_logits': outputs_class.to_tensor(), 'pred_boxes': outputs_coord.to_tensor()}
         if self.aux_loss:
             raise RuntimeError("Not supported")
             # out['aux_outputs'] = [{'pred_logits': a, 'pred_boxes': b}
             #               for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
+        import pdb; pdb.set_trace()
         return out
 
 
@@ -231,6 +233,10 @@ class SetCriterion(nn.Module):
              targets: list of dicts, such that len(targets) == batch_size.
                       The expected keys in each dict depends on the losses applied, see each loss' doc
         """
+
+        print(list(map(lambda x: x.size(), outputs.values())))
+        print(list(map(lambda x: x.size(), targets[0].values())))
+        print(list(map(lambda x: x.size(), targets[1].values())))
         outputs_without_aux = {k: v for k, v in outputs.items() if k != 'aux_outputs'}
 
         # Retrieve the matching between the outputs of the last layer and the targets
