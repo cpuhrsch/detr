@@ -28,7 +28,7 @@ class PositionEmbeddingSine(nn.Module):
     def forward(self, tensor_list):
         pos = []
         for tensor in tensor_list:
-            not_mask = torch.ones_like(tensor, dtype=torch.bool).prod(0)
+            not_mask = (torch.ones_like(tensor, dtype=torch.bool).prod(0)).bool()
             y_embed = not_mask.cumsum(0, dtype=torch.float32)
             x_embed = not_mask.cumsum(1, dtype=torch.float32)
             if self.normalize:
