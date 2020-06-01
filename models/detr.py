@@ -77,17 +77,18 @@ class DETR(nn.Module):
             features_i = features_i_.unsqueeze(0)
             pos_i = pos_i_.unsqueeze(0)
             hs_i = self.transformer(features_i, None, self.query_embed.weight, pos_i)[0]
-            import pdb; pdb.set_trace()
-            hs.append(hs_i.squeeze(0))
+            hs.append(hs_i.squeeze(1))
         hs = nestedtensor.nested_tensor(hs)
         outputs_class = self.class_embed(hs)
         outputs_coord = self.bbox_embed(hs).sigmoid()
         import pdb; pdb.set_trace()
         print("DADAD")
-        out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
+        # out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
+        out = {'pred_logits': outputs_class.to_tensor(), 'pred_boxes': outputs_coord.to_tensor()}
         if self.aux_loss:
-            out['aux_outputs'] = [{'pred_logits': a, 'pred_boxes': b}
-                          for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
+            raise RuntimeError("Not supported")
+            # out['aux_outputs'] = [{'pred_logits': a, 'pred_boxes': b}
+            #               for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
         return out
 
 
