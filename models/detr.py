@@ -82,7 +82,7 @@ class DETR(nn.Module):
         # hs = nestedtensor.nested_tensor(hs)
         hs = torch.cat(hs, dim=1)
         outputs_class = self.class_embed(hs)# .to_tensor()
-        outputs_coord = self.bbox_embed(hs)# .sigmoid().to_tensor()
+        outputs_coord = self.bbox_embed(hs).sigmoid()#.to_tensor()
         print("DADAD")
         out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
         # out = {'pred_logits': outputs_class.to_tensor(), 'pred_boxes': outputs_coord.to_tensor()}
@@ -90,7 +90,7 @@ class DETR(nn.Module):
             raise RuntimeError("Not supported")
             # out['aux_outputs'] = [{'pred_logits': a, 'pred_boxes': b}
             #               for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
-        import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         return out
 
 
