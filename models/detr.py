@@ -64,16 +64,16 @@ class DETR(nn.Module):
         # print('type(features)')
         # print(type(features))
 
-        print("HBDEEEEEE")
+        # print("HBDEEEEEE")
         # src, mask = features[-1].to_tensor_mask(mask_dim=features[-1].dim())
         # mask = mask.prod(1)
         features = nestedtensor.nested_tensor(features_[-1])
         input_proj_features = self.input_proj(features)
-        print("1DADAD")
+        # print("1DADAD")
         hs = []
         # TODO: This indexing fails at some point
         for features_i_, pos_i_ in zip(input_proj_features.unbind(), pos[-1].unbind()):
-            print("2DADAD")
+            # print("2DADAD")
             features_i = features_i_.unsqueeze(0)
             pos_i = pos_i_.unsqueeze(0)
             hs_i = self.transformer(features_i, None, self.query_embed.weight, pos_i)[0]
@@ -83,7 +83,7 @@ class DETR(nn.Module):
         hs = torch.cat(hs, dim=1)
         outputs_class = self.class_embed(hs)# .to_tensor()
         outputs_coord = self.bbox_embed(hs).sigmoid()#.to_tensor()
-        print("DADAD")
+        # print("DADAD")
         out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
         # out = {'pred_logits': outputs_class.to_tensor(), 'pred_boxes': outputs_coord.to_tensor()}
         if self.aux_loss:
@@ -234,9 +234,9 @@ class SetCriterion(nn.Module):
                       The expected keys in each dict depends on the losses applied, see each loss' doc
         """
 
-        print(list(map(lambda x: x.size(), outputs.values())))
-        print(list(map(lambda x: x.size(), targets[0].values())))
-        print(list(map(lambda x: x.size(), targets[1].values())))
+        # print(list(map(lambda x: x.size(), outputs.values())))
+        # print(list(map(lambda x: x.size(), targets[0].values())))
+        # print(list(map(lambda x: x.size(), targets[1].values())))
         outputs_without_aux = {k: v for k, v in outputs.items() if k != 'aux_outputs'}
 
         # Retrieve the matching between the outputs of the last layer and the targets
@@ -315,9 +315,9 @@ class MLP(nn.Module):
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
-            print("i: " , i, " layer: " , layer)
+            # print("i: " , i, " layer: " , layer)
             x = F.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
-        print("DONE")
+        # print("DONE")
         return x
 
 
