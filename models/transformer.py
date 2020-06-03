@@ -55,7 +55,9 @@ class Transformer(nn.Module):
         assert mask is None
         # import pdb; pdb.set_trace()
         query_embed = query_embed.unsqueeze(1) #.repeat(1, len(src), 1)
-        hs = []
+        srcs = []
+        poss = []
+        tgts = []
         for src_i, pos_embed_i in zip(src.unbind(), pos_embed.unbind()):
             # flatten NxCxHxW to HWxNxC
             src_i = src_i.unsqueeze(0)
@@ -66,9 +68,17 @@ class Transformer(nn.Module):
             # mask = mask.flatten(1)
 
             tgt = torch.zeros_like(query_embed)
-            memory = self.encoder(src_i, src_key_padding_mask=mask, pos=pos_embed_i)
-            hs_i = self.decoder(tgt, memory, memory_key_padding_mask=mask,
-                              pos=pos_embed_i, query_pos=query_embed)
+
+            srcs.append(src_i)
+            poss.append(pos_embed_i)
+            tgts.append(tgt)
+
+        hs = []
+        for src_i, pos_i, tgt_i in zip(srcs, poss, tgts):
+            memory = self.encoder(src_i, src_key_padding_mask=mask, pos=pos_i)
+            hs_i = self.decoder(tgt_i, memory, memory_key_padding_mask=mask,
+                              pos=pos_i, query_pos=query_embed)
+
             hs_i = hs_i.transpose(1, 2)
             hs.append(hs_i)
         # import pdb; pdb.set_trace()
