@@ -70,17 +70,26 @@ class DETR(nn.Module):
         features = nestedtensor.nested_tensor(features_[-1])
         input_proj_features = self.input_proj(features)
         # print("1DADAD")
-        hs = []
-        # TODO: This indexing fails at some point
-        for features_i_, pos_i_ in zip(input_proj_features.unbind(), pos[-1].unbind()):
-            # print("2DADAD")
-            features_i = features_i_.unsqueeze(0)
-            pos_i = pos_i_.unsqueeze(0)
-            hs_i = self.transformer(features_i, None, self.query_embed.weight, pos_i)[0]
-            # hs.append(hs_i.squeeze(1))
-            hs.append(hs_i)
-        # hs = nestedtensor.nested_tensor(hs)
-        hs = torch.cat(hs, dim=1)
+
+        # For loop
+        if False:
+            hs = []
+            # TODO: This indexing fails at some point
+            for features_i_, pos_i_ in zip(input_proj_features.unbind(), pos[-1].unbind()):
+                # print("2DADAD")
+                features_i = features_i_.unsqueeze(0)
+                pos_i = pos_i_.unsqueeze(0)
+                hs_i = self.transformer(features_i, None, self.query_embed.weight, pos_i)[0]
+                # hs.append(hs_i.squeeze(1))
+                hs.append(hs_i)
+                hs_i = self.transformer(features_i, None, self.query_embed.weight, pos_i)[0]
+            # hs = nestedtensor.nested_tensor(hs)
+            hs = torch.cat(hs, dim=1)
+
+        # NT
+        hs = self.transformer(input_proj_features, None, self.query_embed.weight, pos[-1])[0]
+        # hs = hs_.to_tensor()
+
         outputs_class = self.class_embed(hs)# .to_tensor()
         outputs_coord = self.bbox_embed(hs).sigmoid()#.to_tensor()
         # print("DADAD")
