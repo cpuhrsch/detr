@@ -54,23 +54,27 @@ class Transformer(nn.Module):
         # query_embed is a Tensor
         assert mask is None
         # import pdb; pdb.set_trace()
+        query_embed = query_embed.unsqueeze(1) #.repeat(1, len(src), 1)
         hs = []
         for src_i, pos_embed_i in zip(src.unbind(), pos_embed.unbind()):
             # flatten NxCxHxW to HWxNxC
             src_i = src_i.unsqueeze(0)
             pos_embed_i = pos_embed_i.unsqueeze(0)
-            bs, c, h, w = src_i.shape
+            # bs, c, h, w = src_i.shape
             src_i = src_i.flatten(2).permute(2, 0, 1)
             pos_embed_i = pos_embed_i.flatten(2).permute(2, 0, 1)
-            query_embed = query_embed.unsqueeze(1).repeat(1, bs, 1)
             # mask = mask.flatten(1)
 
             tgt = torch.zeros_like(query_embed)
             memory = self.encoder(src_i, src_key_padding_mask=mask, pos=pos_embed_i)
             hs_i = self.decoder(tgt, memory, memory_key_padding_mask=mask,
                               pos=pos_embed_i, query_pos=query_embed)
-            hs.append(hs_i.transpose(1, 2), memory.permute(1, 2, 0).view(bs, c, h, w))
-        return torch.cat(hs, dim=1)
+            hs_i = hs_i.transpose(1, 2)
+            hs.append(hs_i)
+        # import pdb; pdb.set_trace()
+        # TODO: Could accumulate memory and return as NT
+        #, memory.permute(1, 2, 0).view(len(src), c, h, w)
+        return torch.cat(hs, dim=1), None
 
 
 class TransformerEncoder(nn.Module):
