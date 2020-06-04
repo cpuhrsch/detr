@@ -91,18 +91,19 @@ class Transformer(nn.Module):
 
         hs = self.decoder(tgt_nt, memory, memory_key_padding_mask=mask,
                              pos=pos_nt, query_pos=query_embed)
-        import pdb; pdb.set_trace()
+        hs_tensors = [nt_i.to_tensor().transpose(0, 1) for nt_i in hs]
 
-        hs = []
-        for tgt_i, pos_i in zip(tgt_nt.unbind(), pos_nt.unbind()):
-            hs_i = self.decoder(tgt_i, memory, memory_key_padding_mask=mask,
-                                 pos=pos_i, query_pos=query_embed)
-            hs_i = hs_i.transpose(1, 2)
-            hs.append(hs_i)
+        # hs = []
+        # for tgt_i, pos_i in zip(tgt_nt.unbind(), pos_nt.unbind()):
+        #     hs_i = self.decoder(tgt_i, memory, memory_key_padding_mask=mask,
+        #                          pos=pos_i, query_pos=query_embed)
+        #     hs_i = hs_i.transpose(1, 2)
+        #     hs.append(hs_i)
         # import pdb; pdb.set_trace()
         # TODO: Could accumulate memory and return as NT
         # , memory.permute(1, 2, 0).view(len(src), c, h, w)
-        return torch.cat(hs, dim=1), None
+        # return torch.cat(hs, dim=1), None
+        return torch.stack(hs_tensors), None
 
 
 class TransformerEncoder(nn.Module):
@@ -156,16 +157,17 @@ class TransformerDecoder(nn.Module):
                            memory_key_padding_mask=memory_key_padding_mask,
                            pos=pos, query_pos=query_pos)
             if self.return_intermediate:
-                intermediate.append(self.norm(output))
+                intermediate.append(norm_loop(self.norm, output))
 
         if self.norm is not None:
-            output = self.norm(output)
+            output = norm_loop(self.norm, output)
             if self.return_intermediate:
                 intermediate.pop()
                 intermediate.append(output)
 
         if self.return_intermediate:
-            return torch.stack(intermediate)
+            return intermediate
+            # return torch.stack(intermediate)
 
         return output
 
@@ -245,15 +247,15 @@ def multi_head_attention_forward(query,                           # type: Tensor
     assert not add_zero_attn
 
     # NOTE: This is usually contiguous plus a view
-    q = q.reshape(-1, -1, num_heads, head_dim)
+    q = q.reshape(-1, -1, head_dim)
     if k is not None:
-        k = k.reshape(-1, -1, num_heads, head_dim)
+        k = k.reshape(-1, -1, head_dim)
     if v is not None:
-        v = v.reshape(-1, -1, num_heads, head_dim)
+        v = v.reshape(-1, -1, head_dim)
 
     # src_len = k.size(1)
 
-    attn_output_weights = torch.matmul(q, k.transpose(2, 3))
+    attn_output_weights = torch.matmul(q, k.transpose(1, 2))
     # attn_output_weights = torch.bmm(q, k.transpose(1, 2))
     # assert list(attn_output_weights.size()) == [bsz * num_heads, tgt_len, src_len]
 
@@ -266,6 +268,7 @@ def multi_head_attention_forward(query,                           # type: Tensor
     # assert list(attn_output.size()) == [bsz * num_heads, tgt_len, head_dim]
 
     # attn_output = attn_output.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
+    # import pdb; pdb.set_trace()
     attn_output = attn_output.reshape(-1, -1, embed_dim)
 
     attn_output = F.linear(attn_output, out_proj_weight, out_proj_bias)
@@ -469,6 +472,7 @@ class TransformerDecoderLayer(nn.Module):
                               key_padding_mask=tgt_key_padding_mask)[0]
         tgt = tgt + self.dropout1(tgt2)
         tgt = norm_loop(self.norm1, tgt)
+        # import pdb; pdb.set_trace()
         tgt2 = self.multihead_attn(query=self.with_pos_embed(tgt, query_pos),
                                    key=self.with_pos_embed(memory, pos),
                                    value=memory, attn_mask=memory_mask,
