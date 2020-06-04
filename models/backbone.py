@@ -49,7 +49,6 @@ class FrozenBatchNorm2d(torch.nn.Module):
         eps = 1e-5
         scale = w * (rv + eps).rsqrt()
         bias = b - rm * scale
-        # TODO: Support torch.Tensor for NestedTensor.__mul__
         return (x * scale + bias).squeeze(1)
 
 
