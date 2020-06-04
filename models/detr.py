@@ -60,46 +60,14 @@ class DETR(nn.Module):
         if not isinstance(samples, nestedtensor.NestedTensor):
             samples = nestedtensor.nested_tensor(samples)
         features_, pos = self.backbone(samples)
-        # TODO: this is a list, why?
-        # print('type(features)')
-        # print(type(features))
-
-        # print("HBDEEEEEE")
-        # src, mask = features[-1].to_tensor_mask(mask_dim=features[-1].dim())
-        # mask = mask.prod(1)
         features = nestedtensor.nested_tensor(features_[-1])
         input_proj_features = self.input_proj(features)
-        # print("1DADAD")
-
-        # For loop
-        if False:
-            hs = []
-            # TODO: This indexing fails at some point
-            for features_i_, pos_i_ in zip(input_proj_features.unbind(), pos[-1].unbind()):
-                # print("2DADAD")
-                features_i = features_i_.unsqueeze(0)
-                pos_i = pos_i_.unsqueeze(0)
-                hs_i = self.transformer(features_i, None, self.query_embed.weight, pos_i)[0]
-                # hs.append(hs_i.squeeze(1))
-                hs.append(hs_i)
-                hs_i = self.transformer(features_i, None, self.query_embed.weight, pos_i)[0]
-            # hs = nestedtensor.nested_tensor(hs)
-            hs = torch.cat(hs, dim=1)
-
-        # NT
         hs = self.transformer(input_proj_features, None, self.query_embed.weight, pos[-1])[0]
-        # hs = hs_.to_tensor()
-
-        outputs_class = self.class_embed(hs)# .to_tensor()
-        outputs_coord = self.bbox_embed(hs).sigmoid()#.to_tensor()
-        # print("DADAD")
+        outputs_class = self.class_embed(hs)
+        outputs_coord = self.bbox_embed(hs).sigmoid()
         out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
-        # out = {'pred_logits': outputs_class.to_tensor(), 'pred_boxes': outputs_coord.to_tensor()}
         if self.aux_loss:
             raise RuntimeError("Not supported")
-            # out['aux_outputs'] = [{'pred_logits': a, 'pred_boxes': b}
-            #               for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
-        # import pdb; pdb.set_trace()
         return out
 
 
@@ -243,9 +211,6 @@ class SetCriterion(nn.Module):
                       The expected keys in each dict depends on the losses applied, see each loss' doc
         """
 
-        # print(list(map(lambda x: x.size(), outputs.values())))
-        # print(list(map(lambda x: x.size(), targets[0].values())))
-        # print(list(map(lambda x: x.size(), targets[1].values())))
         outputs_without_aux = {k: v for k, v in outputs.items() if k != 'aux_outputs'}
 
         # Retrieve the matching between the outputs of the last layer and the targets
@@ -324,9 +289,7 @@ class MLP(nn.Module):
 
     def forward(self, x):
         for i, layer in enumerate(self.layers):
-            # print("i: " , i, " layer: " , layer)
             x = F.relu(layer(x)) if i < self.num_layers - 1 else layer(x)
-        # print("DONE")
         return x
 
 

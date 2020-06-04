@@ -61,49 +61,30 @@ class Transformer(nn.Module):
         # src and pos_embed are both NestedTensors
         # query_embed is a Tensor
         assert mask is None
-        # import pdb; pdb.set_trace()
-        # query_embed = query_embed.unsqueeze(1)  # .repeat(1, len(src), 1)
         query_embed = query_embed  # .repeat(1, len(src), 1)
+        # TODO: MHA batching semantics are annoying
+        # TODO: I think most of this is not needed anymore
         srcs = []
         poss = []
         tgts = []
         for src_i, pos_embed_i in zip(src.unbind(), pos_embed.unbind()):
-            # flatten NxCxHxW to HWxNxC
             src_i = src_i.unsqueeze(0)
             pos_embed_i = pos_embed_i.unsqueeze(0)
-            # bs, c, h, w = src_i.shape
             src_i = src_i.flatten(2).permute(2, 0, 1)
             pos_embed_i = pos_embed_i.flatten(2).permute(2, 0, 1)
-            # mask = mask.flatten(1)
-
             tgt = torch.zeros_like(query_embed)
-
-            # TODO: MHA batching semantics are annoying
-            # import pdb; pdb.set_trace()
             srcs.append(src_i.squeeze(1))
             poss.append(pos_embed_i.squeeze(1))
             tgts.append(tgt.squeeze(1))
-
         src_nt = nestedtensor.nested_tensor(srcs)
         pos_nt = nestedtensor.nested_tensor(poss)
         tgt_nt = nestedtensor.nested_tensor(tgts)
         memory = self.encoder(src_nt, src_key_padding_mask=mask, pos=pos_nt)
 
         hs = self.decoder(tgt_nt, memory, memory_key_padding_mask=mask,
-                             pos=pos_nt, query_pos=query_embed)
-        hs_tensors = [nt_i.to_tensor() for nt_i in hs]
-
-        # hs = []
-        # for tgt_i, pos_i in zip(tgt_nt.unbind(), pos_nt.unbind()):
-        #     hs_i = self.decoder(tgt_i, memory, memory_key_padding_mask=mask,
-        #                          pos=pos_i, query_pos=query_embed)
-        #     hs_i = hs_i.transpose(1, 2)
-        #     hs.append(hs_i)
-        # import pdb; pdb.set_trace()
-        # TODO: Could accumulate memory and return as NT
-        # , memory.permute(1, 2, 0).view(len(src), c, h, w)
-        # return torch.cat(hs, dim=1), None
-        return torch.stack(hs_tensors), None
+                          pos=pos_nt, query_pos=query_embed)
+        # TODO: Could accumulate memory and return as NT: memory.permute(1, 2, 0).view(len(src), c, h, w)
+        return torch.stack(tuple(h.to_tensor for h in hs)), None
 
 
 class TransformerEncoder(nn.Module):
@@ -167,7 +148,6 @@ class TransformerDecoder(nn.Module):
 
         if self.return_intermediate:
             return intermediate
-            # return torch.stack(intermediate)
 
         return output
 
@@ -472,7 +452,6 @@ class TransformerDecoderLayer(nn.Module):
                               key_padding_mask=tgt_key_padding_mask)[0]
         tgt = tgt + self.dropout1(tgt2)
         tgt = norm_loop(self.norm1, tgt)
-        # import pdb; pdb.set_trace()
         tgt2 = self.multihead_attn(query=self.with_pos_embed(tgt, query_pos),
                                    key=self.with_pos_embed(memory, pos),
                                    value=memory, attn_mask=memory_mask,
