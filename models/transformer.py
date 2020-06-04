@@ -17,7 +17,6 @@ from torch import nn, Tensor
 
 import nestedtensor
 
-
 class Transformer(nn.Module):
 
     def __init__(self, d_model=512, nhead=8, num_encoder_layers=6,
@@ -140,10 +139,6 @@ class TransformerDecoder(nn.Module):
             return intermediate
 
         return output
-
-
-
-
 
 
 class TransformerEncoderLayer(nn.Module):
