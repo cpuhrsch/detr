@@ -18,11 +18,6 @@ from torch import nn, Tensor
 import nestedtensor
 
 
-# TODO: Implement norm for NestedTensor
-def norm_loop(norm_module, nt):
-    return nestedtensor.nested_tensor([norm_module(t.unsqueeze(0)).squeeze(0) for t in nt])
-
-
 class Transformer(nn.Module):
 
     def __init__(self, d_model=512, nhead=8, num_encoder_layers=6,
@@ -133,10 +128,10 @@ class TransformerDecoder(nn.Module):
                            memory_key_padding_mask=memory_key_padding_mask,
                            pos=pos, query_pos=query_pos)
             if self.return_intermediate:
-                intermediate.append(norm_loop(self.norm, output))
+                intermediate.append(self.norm(output))
 
         if self.norm is not None:
-            output = norm_loop(self.norm, output)
+            output = self.norm(output)
             if self.return_intermediate:
                 intermediate.pop()
                 intermediate.append(output)
@@ -182,22 +177,22 @@ class TransformerEncoderLayer(nn.Module):
         src2 = self.self_attn(q, k, value=src, attn_mask=src_mask,
                               key_padding_mask=src_key_padding_mask)[0]
         src = src + self.dropout1(src2)
-        src = norm_loop(self.norm1, src)
+        src = self.norm1(src)
         src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
         src = src + self.dropout2(src2)
-        src = norm_loop(self.norm2, src)
+        src = self.norm2(src)
         return src
 
     def forward_pre(self, src,
                     src_mask: Optional[Tensor] = None,
                     src_key_padding_mask: Optional[Tensor] = None,
                     pos: Optional[Tensor] = None):
-        src = norm_loop(self.norm1, src)
+        src = self.norm1(src)
         q = k = self.with_pos_embed(src2, pos)
         src2 = self.self_attn(q, k, value=src2, attn_mask=src_mask,
                               key_padding_mask=src_key_padding_mask)[0]
         src = src + self.dropout1(src2)
-        src2 = norm_loop(self.norm2, src)
+        src2 = self.norm2(src)
         src2 = self.linear2(self.dropout(self.activation(self.linear1(src2))))
         src = src + self.dropout2(src2)
         return src
@@ -247,16 +242,16 @@ class TransformerDecoderLayer(nn.Module):
         tgt2 = self.self_attn(q, k, value=tgt, attn_mask=tgt_mask,
                               key_padding_mask=tgt_key_padding_mask)[0]
         tgt = tgt + self.dropout1(tgt2)
-        tgt = norm_loop(self.norm1, tgt)
+        tgt = self.norm1(tgt)
         tgt2 = self.multihead_attn(query=self.with_pos_embed(tgt, query_pos),
                                    key=self.with_pos_embed(memory, pos),
                                    value=memory, attn_mask=memory_mask,
                                    key_padding_mask=memory_key_padding_mask)[0]
         tgt = tgt + self.dropout2(tgt2)
-        tgt = norm_loop(self.norm2, tgt)
+        tgt = self.norm2(tgt)
         tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt))))
         tgt = tgt + self.dropout3(tgt2)
-        tgt = norm_loop(self.norm3, tgt)
+        tgt = self.norm3(tgt)
         return tgt
 
     def forward_pre(self, tgt, memory,
