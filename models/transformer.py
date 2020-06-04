@@ -233,18 +233,19 @@ def multi_head_attention_forward(query,                           # type: Tensor
     assert static_v is None
     assert not add_zero_attn
 
-    # TODO: Implement using NestedSize and constructor
-    import pdb; pdb.set_trace()
-    q = q.contiguous().view(tgt_len, bsz * num_heads, head_dim).transpose(0, 1)
+    # NOTE: This is usually contiguous plus a view
+    q = q.reshape(-1, -1, num_heads, head_dim)
     if k is not None:
-        k = k.contiguous().view(-1, bsz * num_heads, head_dim).transpose(0, 1)
+        k = k.reshape(-1, -1, num_heads, head_dim)
     if v is not None:
-        v = v.contiguous().view(-1, bsz * num_heads, head_dim).transpose(0, 1)
+        v = v.reshape(-1, -1, num_heads, head_dim)
+    import pdb; pdb.set_trace()
 
-    src_len = k.size(1)
+    # src_len = k.size(1)
 
-    attn_output_weights = torch.bmm(q, k.transpose(1, 2))
-    assert list(attn_output_weights.size()) == [bsz * num_heads, tgt_len, src_len]
+    attn_output_weights = torch.matmul(q, k.transpose(2, 3))
+    # attn_output_weights = torch.bmm(q, k.transpose(1, 2))
+    # assert list(attn_output_weights.size()) == [bsz * num_heads, tgt_len, src_len]
 
     attn_output_weights = F.softmax(
         attn_output_weights, dim=-1)
