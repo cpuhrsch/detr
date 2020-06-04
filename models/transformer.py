@@ -47,8 +47,7 @@ class Transformer(nn.Module):
                 nn.init.xavier_uniform_(p)
 
     def forward(self, src, mask, query_embed, pos_embed):
-        # src and pos_embed are both NestedTensors
-        # query_embed is a Tensor
+        # src and pos_embed are both NestedTensors, query_embed is a Tensor
         assert mask is None
         src_nt = nestedtensor.nested_tensor([src_i.flatten(1) for src_i in src]).transpose(1, 2)
         pos_nt = nestedtensor.nested_tensor([pos_embed_i.flatten(1) for pos_embed_i in pos_embed]).transpose(1, 2)
