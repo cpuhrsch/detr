@@ -21,11 +21,10 @@ from torch.nn.parameter import Parameter
 
 import nestedtensor
 
+
+# TODO: Implement norm for NestedTensor
 def norm_loop(norm_module, nt):
-    result = []
-    for tensor in nt.unbind():
-        result.append(norm_module(tensor))
-    return nestedtensor.nested_tensor(result)
+    return nestedtensor.nested_tensor([norm_module(t) for t in nt])
 
 
 class Transformer(nn.Module):
