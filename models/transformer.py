@@ -50,12 +50,12 @@ class Transformer(nn.Module):
         # src and pos_embed are both NestedTensors, query_embed is a Tensor
         assert mask is None
         src = nestedtensor.nested_tensor([src_i.flatten(1) for src_i in src]).transpose(1, 2)
-        pos = nestedtensor.nested_tensor([pos_embed_i.flatten(1) for pos_embed_i in pos_embed]).transpose(1, 2)
+        pos_embed = nestedtensor.nested_tensor([pos_embed_i.flatten(1) for pos_embed_i in pos_embed]).transpose(1, 2)
         tgt = nestedtensor.nested_tensor([torch.zeros_like(query_embed) for _ in range(len(src))])
         memory = self.encoder(src, src_key_padding_mask=mask, pos=pos)
 
         hs = self.decoder(tgt, memory, memory_key_padding_mask=mask,
-                          pos=pos, query_pos=query_embed)
+                          pos=pos_embed, query_pos=query_embed)
         # TODO: Could accumulate memory and return as NT: memory.permute(1, 2, 0).view(len(src), c, h, w)
         return torch.stack(tuple(h.to_tensor() for h in hs)), None
 
