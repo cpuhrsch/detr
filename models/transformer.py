@@ -91,7 +91,7 @@ class Transformer(nn.Module):
 
         hs = self.decoder(tgt_nt, memory, memory_key_padding_mask=mask,
                              pos=pos_nt, query_pos=query_embed)
-        hs_tensors = [nt_i.to_tensor().transpose(0, 1) for nt_i in hs]
+        hs_tensors = [nt_i.to_tensor() for nt_i in hs]
 
         # hs = []
         # for tgt_i, pos_i in zip(tgt_nt.unbind(), pos_nt.unbind()):
