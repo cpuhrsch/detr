@@ -21,6 +21,12 @@ from torch.nn.parameter import Parameter
 
 import nestedtensor
 
+def norm_loop(norm_module, nt):
+    result = []
+    for tensor in nt.unbind():
+        result.append(norm_module(tensor))
+    return nestedtensor.nested_tensor(result)
+
 
 class Transformer(nn.Module):
 
@@ -56,7 +62,8 @@ class Transformer(nn.Module):
         # query_embed is a Tensor
         assert mask is None
         # import pdb; pdb.set_trace()
-        query_embed = query_embed.unsqueeze(1)  # .repeat(1, len(src), 1)
+        # query_embed = query_embed.unsqueeze(1)  # .repeat(1, len(src), 1)
+        query_embed = query_embed  # .repeat(1, len(src), 1)
         srcs = []
         poss = []
         tgts = []
@@ -75,12 +82,16 @@ class Transformer(nn.Module):
             # import pdb; pdb.set_trace()
             srcs.append(src_i.squeeze(1))
             poss.append(pos_embed_i.squeeze(1))
-            tgts.append(tgt)
+            tgts.append(tgt.squeeze(1))
 
         src_nt = nestedtensor.nested_tensor(srcs)
         pos_nt = nestedtensor.nested_tensor(poss)
         tgt_nt = nestedtensor.nested_tensor(tgts)
         memory = self.encoder(src_nt, src_key_padding_mask=mask, pos=pos_nt)
+
+        hs = self.decoder(tgt_nt, memory, memory_key_padding_mask=mask,
+                             pos=pos_nt, query_pos=query_embed)
+        import pdb; pdb.set_trace()
 
         hs = []
         for tgt_i, pos_i in zip(tgt_nt.unbind(), pos_nt.unbind()):
@@ -239,7 +250,6 @@ def multi_head_attention_forward(query,                           # type: Tensor
         k = k.reshape(-1, -1, num_heads, head_dim)
     if v is not None:
         v = v.reshape(-1, -1, num_heads, head_dim)
-    import pdb; pdb.set_trace()
 
     # src_len = k.size(1)
 
@@ -252,9 +262,12 @@ def multi_head_attention_forward(query,                           # type: Tensor
         attn_output_weights, dim=-1)
     attn_output_weights = F.dropout(attn_output_weights, p=dropout_p, training=training)
 
-    attn_output = torch.bmm(attn_output_weights, v)
-    assert list(attn_output.size()) == [bsz * num_heads, tgt_len, head_dim]
-    attn_output = attn_output.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
+    attn_output = torch.matmul(attn_output_weights, v)
+    # assert list(attn_output.size()) == [bsz * num_heads, tgt_len, head_dim]
+
+    # attn_output = attn_output.transpose(0, 1).contiguous().view(tgt_len, bsz, embed_dim)
+    attn_output = attn_output.reshape(-1, -1, embed_dim)
+
     attn_output = F.linear(attn_output, out_proj_weight, out_proj_bias)
 
     # if need_weights:
@@ -390,22 +403,22 @@ class TransformerEncoderLayer(nn.Module):
         src2 = self.self_attn(q, k, value=src, attn_mask=src_mask,
                               key_padding_mask=src_key_padding_mask)[0]
         src = src + self.dropout1(src2)
-        src = self.norm1(src)
+        src = norm_loop(self.norm1, src)
         src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
         src = src + self.dropout2(src2)
-        src = self.norm2(src)
+        src = norm_loop(self.norm2, src)
         return src
 
     def forward_pre(self, src,
                     src_mask: Optional[Tensor] = None,
                     src_key_padding_mask: Optional[Tensor] = None,
                     pos: Optional[Tensor] = None):
-        src2 = self.norm1(src)
+        src = norm_loop(self.norm1, src)
         q = k = self.with_pos_embed(src2, pos)
         src2 = self.self_attn(q, k, value=src2, attn_mask=src_mask,
                               key_padding_mask=src_key_padding_mask)[0]
         src = src + self.dropout1(src2)
-        src2 = self.norm2(src)
+        src2 = norm_loop(self.norm2, src)
         src2 = self.linear2(self.dropout(self.activation(self.linear1(src2))))
         src = src + self.dropout2(src2)
         return src
@@ -424,8 +437,8 @@ class TransformerDecoderLayer(nn.Module):
     def __init__(self, d_model, nhead, dim_feedforward=2048, dropout=0.1,
                  activation="relu", normalize_before=False):
         super().__init__()
-        self.self_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
-        self.multihead_attn = nn.MultiheadAttention(d_model, nhead, dropout=dropout)
+        self.self_attn = MultiheadAttention(d_model, nhead, dropout=dropout)
+        self.multihead_attn = MultiheadAttention(d_model, nhead, dropout=dropout)
         # Implementation of Feedforward model
         self.linear1 = nn.Linear(d_model, dim_feedforward)
         self.dropout = nn.Dropout(dropout)
@@ -455,16 +468,16 @@ class TransformerDecoderLayer(nn.Module):
         tgt2 = self.self_attn(q, k, value=tgt, attn_mask=tgt_mask,
                               key_padding_mask=tgt_key_padding_mask)[0]
         tgt = tgt + self.dropout1(tgt2)
-        tgt = self.norm1(tgt)
+        tgt = norm_loop(self.norm1, tgt)
         tgt2 = self.multihead_attn(query=self.with_pos_embed(tgt, query_pos),
                                    key=self.with_pos_embed(memory, pos),
                                    value=memory, attn_mask=memory_mask,
                                    key_padding_mask=memory_key_padding_mask)[0]
         tgt = tgt + self.dropout2(tgt2)
-        tgt = self.norm2(tgt)
+        tgt = norm_loop(self.norm2, tgt)
         tgt2 = self.linear2(self.dropout(self.activation(self.linear1(tgt))))
         tgt = tgt + self.dropout3(tgt2)
-        tgt = self.norm3(tgt)
+        tgt = norm_loop(self.norm3, tgt)
         return tgt
 
     def forward_pre(self, tgt, memory,
