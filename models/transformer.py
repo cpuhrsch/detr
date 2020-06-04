@@ -50,24 +50,9 @@ class Transformer(nn.Module):
         # src and pos_embed are both NestedTensors
         # query_embed is a Tensor
         assert mask is None
-        query_embed = query_embed  # .repeat(1, len(src), 1)
-        # TODO: MHA batching semantics are annoying
-        # TODO: I think most of this is not needed anymore
-        srcs = []
-        poss = []
-        tgts = []
-        for src_i, pos_embed_i in zip(src.unbind(), pos_embed.unbind()):
-            src_i = src_i.unsqueeze(0)
-            pos_embed_i = pos_embed_i.unsqueeze(0)
-            src_i = src_i.flatten(2).permute(2, 0, 1)
-            pos_embed_i = pos_embed_i.flatten(2).permute(2, 0, 1)
-            tgt = torch.zeros_like(query_embed)
-            srcs.append(src_i.squeeze(1))
-            poss.append(pos_embed_i.squeeze(1))
-            tgts.append(tgt.squeeze(1))
-        src_nt = nestedtensor.nested_tensor(srcs)
-        pos_nt = nestedtensor.nested_tensor(poss)
-        tgt_nt = nestedtensor.nested_tensor(tgts)
+        src_nt = nestedtensor.nested_tensor([src_i.flatten(1) for src_i in src]).transpose(1, 2)
+        pos_nt = nestedtensor.nested_tensor([pos_embed_i.flatten(1) for pos_embed_i in pos_embed]).transpose(1, 2)
+        tgt_nt = nestedtensor.nested_tensor([torch.zeros_like(query_embed) for _ in range(len(src))])
         memory = self.encoder(src_nt, src_key_padding_mask=mask, pos=pos_nt)
 
         hs = self.decoder(tgt_nt, memory, memory_key_padding_mask=mask,
