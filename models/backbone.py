@@ -67,8 +67,7 @@ class BackboneBase(nn.Module):
         self.num_channels = num_channels
 
     def forward(self, tensor_list):
-        out = self.body(tensor_list)
-        return out
+        return self.body(tensor_list)
 
 
 class Backbone(BackboneBase):
