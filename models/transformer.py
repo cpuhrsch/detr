@@ -247,15 +247,15 @@ def multi_head_attention_forward(query,                           # type: Tensor
     assert not add_zero_attn
 
     # NOTE: This is usually contiguous plus a view
-    q = q.reshape(-1, -1, head_dim)
+    q = q.reshape(-1, num_heads, -1, head_dim)
     if k is not None:
-        k = k.reshape(-1, -1, head_dim)
+        k = k.reshape(-1, num_heads, -1, head_dim)
     if v is not None:
-        v = v.reshape(-1, -1, head_dim)
+        v = v.reshape(-1, num_heads, -1, head_dim)
 
     # src_len = k.size(1)
 
-    attn_output_weights = torch.matmul(q, k.transpose(1, 2))
+    attn_output_weights = torch.matmul(q, k.transpose(2, 3))
     # attn_output_weights = torch.bmm(q, k.transpose(1, 2))
     # assert list(attn_output_weights.size()) == [bsz * num_heads, tgt_len, src_len]
 
