@@ -24,7 +24,7 @@ import nestedtensor
 
 # TODO: Implement norm for NestedTensor
 def norm_loop(norm_module, nt):
-    return nestedtensor.nested_tensor([norm_module(t) for t in nt])
+    return nestedtensor.nested_tensor([norm_module(t.unsqueeze(0)).squeeze(0) for t in nt])
 
 
 class Transformer(nn.Module):
@@ -83,7 +83,7 @@ class Transformer(nn.Module):
         hs = self.decoder(tgt_nt, memory, memory_key_padding_mask=mask,
                           pos=pos_nt, query_pos=query_embed)
         # TODO: Could accumulate memory and return as NT: memory.permute(1, 2, 0).view(len(src), c, h, w)
-        return torch.stack(tuple(h.to_tensor for h in hs)), None
+        return torch.stack(tuple(h.to_tensor() for h in hs)), None
 
 
 class TransformerEncoder(nn.Module):
