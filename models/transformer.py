@@ -49,13 +49,13 @@ class Transformer(nn.Module):
     def forward(self, src, mask, query_embed, pos_embed):
         # src and pos_embed are both NestedTensors, query_embed is a Tensor
         assert mask is None
-        src_nt = nestedtensor.nested_tensor([src_i.flatten(1) for src_i in src]).transpose(1, 2)
-        pos_nt = nestedtensor.nested_tensor([pos_embed_i.flatten(1) for pos_embed_i in pos_embed]).transpose(1, 2)
-        tgt_nt = nestedtensor.nested_tensor([torch.zeros_like(query_embed) for _ in range(len(src))])
-        memory = self.encoder(src_nt, src_key_padding_mask=mask, pos=pos_nt)
+        src = nestedtensor.nested_tensor([src_i.flatten(1) for src_i in src]).transpose(1, 2)
+        pos = nestedtensor.nested_tensor([pos_embed_i.flatten(1) for pos_embed_i in pos_embed]).transpose(1, 2)
+        tgt = nestedtensor.nested_tensor([torch.zeros_like(query_embed) for _ in range(len(src))])
+        memory = self.encoder(src, src_key_padding_mask=mask, pos=pos)
 
-        hs = self.decoder(tgt_nt, memory, memory_key_padding_mask=mask,
-                          pos=pos_nt, query_pos=query_embed)
+        hs = self.decoder(tgt, memory, memory_key_padding_mask=mask,
+                          pos=pos, query_pos=query_embed)
         # TODO: Could accumulate memory and return as NT: memory.permute(1, 2, 0).view(len(src), c, h, w)
         return torch.stack(tuple(h.to_tensor() for h in hs)), None
 
