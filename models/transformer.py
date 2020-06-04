@@ -247,6 +247,7 @@ def multi_head_attention_forward(query,                           # type: Tensor
     # attn_output_weights = torch.bmm(q, k.transpose(1, 2))
     # assert list(attn_output_weights.size()) == [bsz * num_heads, tgt_len, src_len]
 
+    # NEXT: Softmax
     attn_output_weights = F.softmax(
         attn_output_weights, dim=-1)
     attn_output_weights = F.dropout(attn_output_weights, p=dropout_p, training=training)
