@@ -267,7 +267,6 @@ def get_sha():
 
 
 def collate_fn(batch):
-    # TODO: NestedTensor doesn't support pickle yet
     batch = list(zip(*batch))
     batch[0] = nestedtensor.nested_tensor(batch[0])
     return tuple(batch)
