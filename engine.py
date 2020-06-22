@@ -8,6 +8,7 @@ import sys
 from typing import Iterable
 
 import torch
+import nestedtensor
 
 import util.misc as utils
 from datasets.coco_eval import CocoEvaluator
@@ -86,6 +87,7 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
         )
 
     for samples, targets in metric_logger.log_every(data_loader, 10, header):
+        samples = nestedtensor.nested_tensor(samples)
         samples = samples.to(device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
