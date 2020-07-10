@@ -36,11 +36,9 @@ class PositionEmbeddingSine(nn.Module):
             eps = 1e-6
             y_embed = y_embed / (y_embed[:, -1:, :] + eps) * self.scale
             x_embed = x_embed / (x_embed[:, :, -1:] + eps) * self.scale
-        dim_t = []
-        for tensor, x_embed_i, y_embed_i in zip(tensor_list, x_embed, y_embed):
-            dim_t_i = torch.arange(self.num_pos_feats, dtype=torch.float32, device=tensor.device)
-            dim_t.append(self.temperature ** (2 * (dim_t_i // 2) / self.num_pos_feats))
+        dim_t = [torch.arange(self.num_pos_feats, dtype=torch.float32, device=tensor.device) for t in tensor_list]
         dim_t = nestedtensor.nested_tensor(dim_t)
+        dim_t = self.temperature ** (2 * (dim_t // 2) / self.num_pos_feats)
         pos_x = x_embed[:, :, :, None] / dim_t
         pos_y = y_embed[:, :, :, None] / dim_t
         pos_x_sin = pos_x[:, :, :, 0::2].sin()
