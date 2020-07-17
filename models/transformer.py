@@ -52,7 +52,7 @@ class Transformer(nn.Module):
         src = nestedtensor.nested_tensor(src)
         src = src.flatten(2).transpose(1, 2)
         pos_embed = nestedtensor.nested_tensor(pos_embed)
-        pos_embed = pos_embed.flatten(2).transpose(1, 2)
+        pos_embed = pos_embed.reshape(-1, -1, pos_embed.size(-1))
         tgt = [torch.zeros_like(query_embed) for _ in range(len(src))]
         tgt = nestedtensor.nested_tensor(tgt)
         memory = self.encoder(src, src_key_padding_mask=mask, pos=pos_embed)

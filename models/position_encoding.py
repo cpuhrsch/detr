@@ -49,9 +49,10 @@ class PositionEmbeddingSine(nn.Module):
         for pos_x_sin_i, pos_y_sin_i, pos_x_cos_i, pos_y_cos_i in zip(pos_x_sin, pos_y_sin, pos_x_cos, pos_y_cos):
             pos_x_i = torch.stack((pos_x_sin_i, pos_x_cos_i), dim=3).flatten(2)
             pos_y_i = torch.stack((pos_y_sin_i, pos_y_cos_i), dim=3).flatten(2)
-            pos_i = torch.cat((pos_y_i, pos_x_i), dim=2).permute(2, 0, 1)
+            pos_i = torch.cat((pos_y_i, pos_x_i), dim=2)
             pos.append(pos_i)
-        return nestedtensor.nested_tensor(pos)
+        res = nestedtensor.nested_tensor(pos)
+        return res
 
 
 class PositionEmbeddingLearned(nn.Module):
