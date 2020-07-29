@@ -67,7 +67,8 @@ class DETR(nn.Module):
         outputs_coord = self.bbox_embed(hs).sigmoid()
         out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
         if self.aux_loss:
-            raise RuntimeError("Not supported")
+            out['aux_outputs'] = [{'pred_logits': a, 'pred_boxes': b}
+                                  for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
         return out
 
 
