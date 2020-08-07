@@ -57,11 +57,8 @@ class DETR(nn.Module):
                - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
                                 dictionnaries containing the two above keys for each decoder layer.
         """
-        if not isinstance(samples, nestedtensor.NestedTensor):
-            samples = nestedtensor.nested_tensor(samples)
-        features_, pos = self.backbone(samples)
-        features = nestedtensor.nested_tensor(features_[-1])
-        input_proj_features = self.input_proj(features)
+        features, pos = self.backbone(samples)
+        input_proj_features = self.input_proj(features[-1])
         hs = self.transformer(input_proj_features, None, self.query_embed.weight, pos[-1])[0]
         outputs_class = self.class_embed(hs)
         outputs_coord = self.bbox_embed(hs).sigmoid()

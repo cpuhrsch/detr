@@ -49,9 +49,7 @@ class Transformer(nn.Module):
     def forward(self, src, mask, query_embed, pos_embed):
         # src and pos_embed are both NestedTensors, query_embed is a Tensor
         assert mask is None
-        src = nestedtensor.nested_tensor(src)
         src = src.flatten(2).transpose(1, 2)
-        pos_embed = nestedtensor.nested_tensor(pos_embed)
         pos_embed = pos_embed.reshape(-1, -1, pos_embed.size(-1))
         tgt = [torch.zeros_like(query_embed) for _ in range(len(src))]
         tgt = nestedtensor.nested_tensor(tgt)
