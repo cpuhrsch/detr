@@ -11,7 +11,10 @@ from torch import nn
 from torchvision.models._utils import IntermediateLayerGetter
 from typing import Dict, List
 
+from util.misc import is_main_process
 from .position_encoding import build_position_encoding
+
+import nestedtensor
 
 
 class FrozenBatchNorm2d(torch.nn.Module):
@@ -88,7 +91,7 @@ class Joiner(nn.Sequential):
     def __init__(self, backbone, position_embedding):
         super().__init__(backbone, position_embedding)
 
-    def forward(self, tensor_list: NestedTensor):
+    def forward(self, tensor_list: nestedtensor.NestedTensor):
         xs = self[0](tensor_list)
         out: List[NestedTensor] = []
         pos = []
