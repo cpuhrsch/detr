@@ -123,7 +123,7 @@ class TransformerDecoder(nn.Module):
         if self.return_intermediate:
             return intermediate
 
-        return output
+        return output.unsqueeze(0)
 
 
 class TransformerEncoderLayer(nn.Module):

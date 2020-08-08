@@ -17,6 +17,8 @@ Training code follows this idea - it is not a library,
 but simply a [main.py](main.py) importing model and criterion
 definitions with standard training loops.
 
+Additionnally, we provide a Detectron2 wrapper in the d2/ folder. See the readme there for more information.
+
 For details see [End-to-End Object Detection with Transformers](https://ai.facebook.com/research/publications/end-to-end-object-detection-with-transformers) by Nicolas Carion, Francisco Massa, Gabriel Synnaeve, Nicolas Usunier, Alexander Kirillov, and Sergey Zagoruyko.
 
 # Model Zoo
@@ -45,7 +47,7 @@ with torchscript transformer.
       <td>500</td>
       <td>0.036</td>
       <td>42.0</td>
-      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r50-e632da11.pth">download</a></td>
+      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r50-e632da11.pth">model</a>&nbsp;|&nbsp;<a href="https://dl.fbaipublicfiles.com/detr/logs/detr-r50_log.txt">logs</a></td>
       <td>159Mb</td>
     </tr>
     <tr>
@@ -55,7 +57,7 @@ with torchscript transformer.
       <td>500</td>
       <td>0.083</td>
       <td>43.3</td>
-      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r50-dc5-f0fb7ef5.pth">download</a></td>
+      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r50-dc5-f0fb7ef5.pth">model</a>&nbsp;|&nbsp;<a href="https://dl.fbaipublicfiles.com/detr/logs/detr-r50-dc5_log.txt">logs</a></td>
       <td>159Mb</td>
     </tr>
     <tr>
@@ -65,7 +67,7 @@ with torchscript transformer.
       <td>500</td>
       <td>0.050</td>
       <td>43.5</td>
-      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r101-2c7b67e5.pth">download</a></td>
+      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r101-2c7b67e5.pth">model</a>&nbsp;|&nbsp;<a href="https://dl.fbaipublicfiles.com/detr/logs/detr-r101_log.txt">logs</a></td>
       <td>232Mb</td>
     </tr>
     <tr>
@@ -75,13 +77,20 @@ with torchscript transformer.
       <td>500</td>
       <td>0.097</td>
       <td>44.9</td>
-      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r101-dc5-a2e86def.pth">download</a></td>
+      <td><a href="https://dl.fbaipublicfiles.com/detr/detr-r101-dc5-a2e86def.pth">model</a>&nbsp;|&nbsp;<a href="https://dl.fbaipublicfiles.com/detr/logs/detr-r101-dc5_log.txt">logs</a></td>
       <td>232Mb</td>
     </tr>
   </tbody>
 </table>
 
 COCO val5k evaluation results can be found in this [gist](https://gist.github.com/szagoruyko/9c9ebb8455610958f7deaa27845d7918).
+
+The models are also available via torch hub,
+to load DETR R50 with pretrained weights simply do:
+```python
+model = torch.hub.load('facebookresearch/detr', 'detr_resnet50', pretrained=True)
+```
+
 
 COCO panoptic val5k models:
 <table>
@@ -131,13 +140,18 @@ COCO panoptic val5k models:
   </tbody>
 </table>
 
-The models are also available via torch hub,
-to load DETR R50 with pretrained weights simply do:
-```python
-model = torch.hub.load('facebookresearch/detr', 'detr_resnet50', pretrained=True)
-```
+Checkout our [panoptic colab](https://colab.research.google.com/github/facebookresearch/detr/blob/colab/notebooks/DETR_panoptic.ipynb)
+to see how to use and visualize DETR's panoptic segmentation prediction.
 
-# Usage
+# Notebooks
+
+We provide a few notebooks in colab to help you get a grasp on DETR:
+* [DETR's hands on Colab Notebook](https://colab.research.google.com/github/facebookresearch/detr/blob/colab/notebooks/detr_attention.ipynb): Shows how to load a model from hub, generate predictions, then visualize the attention of the model (similar to the figures of the paper)
+* [Standalone Colab Notebook](https://colab.research.google.com/github/facebookresearch/detr/blob/colab/notebooks/detr_demo.ipynb): In this notebook, we demonstrate how to implement a simplified version of DETR from the grounds up in 50 lines of Python, then visualize the predictions. It is a good starting point if you want to gain better understanding the architecture and poke around before diving in the codebase.
+* [Panoptic Colab Notebook](https://colab.research.google.com/github/facebookresearch/detr/blob/colab/notebooks/DETR_panoptic.ipynb): Demonstrates how to use DETR for panoptic segmentation and plot the predictions.
+
+
+# Usage - Object detection
 There are no extra compiled components in DETR and package dependencies are minimal,
 so the code is very simple to use. We provide instructions how to install dependencies via conda.
 First, clone the repository locally:
@@ -210,6 +224,37 @@ Train baseline DETR-6-6 model on 4 nodes for 300 epochs:
 ```
 python run_with_submitit.py --timeout 3000 --coco_path /path/to/coco
 ```
+
+# Usage - Segmentation
+
+We show that it is relatively straightforward to extend DETR to predict segmentation masks. We mainly demonstrate strong panoptic segmentation results.
+
+## Data preparation
+
+For panoptic segmentation, you need the panoptic annotations additionally to the coco dataset (see above for the coco dataset). You need to download and extract the [annotations](http://images.cocodataset.org/annotations/panoptic_annotations_trainval2017.zip).
+We expect the directory structure to be the following:
+```
+path/to/coco_panoptic/
+  annotations/  # annotation json files
+  panoptic_train2017/    # train panoptic annotations
+  panoptic_val2017/      # val panoptic annotations
+```
+
+## Training
+
+We recommend training segmentation in two stages: first train DETR to detect all the boxes, and then train the segmentation head.
+For panoptic segmentation, DETR must learn to detect boxes for both stuff and things classes. You can train it on a single node with 8 gpus for 300 epochs with:
+```
+python -m torch.distributed.launch --nproc_per_node=8 --use_env main.py --coco_path /path/to/coco  --coco_panoptic_path /path/to/coco_panoptic --dataset_file coco_panoptic --output_dir /output/path/box_model
+```
+For instance segmentation, you can simply train a normal box model (or used a pre-trained one we provide).
+
+Once you have a box model checkpoint, you need to freeze it, and train the segmentation head in isolation.
+For panoptic segmentation you can train on a single node with 8 gpus for 25 epochs:
+```
+python -m torch.distributed.launch --nproc_per_node=8 --use_env main.py --masks --epochs 25 --lr_drop 15 --coco_path /path/to/coco  --coco_panoptic_path /path/to/coco_panoptic  --dataset_file coco_panoptic --frozen_weights /output/path/box_model/checkpoint.pth --output_dir /output/path/segm_model
+```
+For instance segmentation only, simply remove the `dataset_file` and `coco_panoptic_path` arguments from the above command line.
 
 # License
 DETR is released under the Apache 2.0 license. Please see the [LICENSE](LICENSE) file for more information.

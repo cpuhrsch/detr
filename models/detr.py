@@ -64,9 +64,16 @@ class DETR(nn.Module):
         outputs_coord = self.bbox_embed(hs).sigmoid()
         out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
         if self.aux_loss:
-            out['aux_outputs'] = [{'pred_logits': a, 'pred_boxes': b}
-                                  for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
+            out['aux_outputs'] = self._set_aux_loss(outputs_class, outputs_coord)
         return out
+
+    @torch.jit.unused
+    def _set_aux_loss(self, outputs_class, outputs_coord):
+        # this is a workaround to make torchscript happy, as torchscript
+        # doesn't support dictionary with non-homogeneous values, such
+        # as a dict having both a Tensor and a list.
+        return [{'pred_logits': a, 'pred_boxes': b}
+                for a, b in zip(outputs_class[:-1], outputs_coord[:-1])]
 
 
 class SetCriterion(nn.Module):
@@ -132,7 +139,7 @@ class SetCriterion(nn.Module):
     def loss_boxes(self, outputs, targets, indices, num_boxes):
         """Compute the losses related to the bounding boxes, the L1 regression loss and the GIoU loss
            targets dicts must contain the key "boxes" containing a tensor of dim [nb_target_boxes, 4]
-           The target boxes are expected in format (center_x, center_y, h, w), normalized by the image size.
+           The target boxes are expected in format (center_x, center_y, w, h), normalized by the image size.
         """
         assert 'pred_boxes' in outputs
         idx = self._get_src_permutation_idx(indices)
@@ -162,7 +169,7 @@ class SetCriterion(nn.Module):
         src_masks = outputs["pred_masks"]
 
         # TODO use valid to mask invalid areas due to padding in loss
-        target_masks, valid = NestedTensor.from_tensor_list([t["masks"] for t in targets]).decompose()
+        target_masks, valid = nested_tensor_from_tensor_list([t["masks"] for t in targets]).decompose()
         target_masks = target_masks.to(src_masks)
 
         src_masks = src_masks[src_idx]
@@ -308,7 +315,7 @@ def build(args):
         aux_loss=args.aux_loss,
     )
     if args.masks:
-        model = DETRsegm(model)
+        model = DETRsegm(model, freeze_detr=(args.frozen_weights is not None))
     matcher = build_matcher(args)
     weight_dict = {'loss_ce': 1, 'loss_bbox': args.bbox_loss_coef}
     weight_dict['loss_giou'] = args.giou_loss_coef
@@ -333,6 +340,6 @@ def build(args):
         postprocessors['segm'] = PostProcessSegm()
         if args.dataset_file == "coco_panoptic":
             is_thing_map = {i: i <= 90 for i in range(201)}
-            postprocessors["panoptic"] = PostProcessPanoptic(is_thing_map, True, threshold=0.85)
+            postprocessors["panoptic"] = PostProcessPanoptic(is_thing_map, threshold=0.85)
 
     return model, criterion, postprocessors

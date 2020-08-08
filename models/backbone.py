@@ -9,6 +9,7 @@ import torch.nn.functional as F
 import torchvision
 from torch import nn
 from torchvision.models._utils import IntermediateLayerGetter
+from typing import Dict, List
 
 from .position_encoding import build_position_encoding
 
@@ -62,7 +63,7 @@ class BackboneBase(nn.Module):
         if return_interm_layers:
             return_layers = {"layer1": "0", "layer2": "1", "layer3": "2", "layer4": "3"}
         else:
-            return_layers = {'layer4': 0}
+            return_layers = {'layer4': "0"}
         self.body = IntermediateLayerGetter(backbone, return_layers=return_layers)
         self.num_channels = num_channels
 
@@ -78,7 +79,7 @@ class Backbone(BackboneBase):
                  dilation: bool):
         backbone = getattr(torchvision.models, name)(
             replace_stride_with_dilation=[False, False, dilation],
-            pretrained=True, norm_layer=FrozenBatchNorm2d)
+            pretrained=is_main_process(), norm_layer=FrozenBatchNorm2d)
         num_channels = 512 if name in ('resnet18', 'resnet34') else 2048
         super().__init__(backbone, train_backbone, num_channels, return_interm_layers)
 
@@ -87,9 +88,9 @@ class Joiner(nn.Sequential):
     def __init__(self, backbone, position_embedding):
         super().__init__(backbone, position_embedding)
 
-    def forward(self, tensor_list):
+    def forward(self, tensor_list: NestedTensor):
         xs = self[0](tensor_list)
-        out = []
+        out: List[NestedTensor] = []
         pos = []
         for name, x in xs.items():
             out.append(x)
