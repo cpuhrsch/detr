@@ -52,7 +52,9 @@ class Transformer(nn.Module):
         src = src.flatten(2).transpose(1, 2)
         pos_embed = pos_embed.reshape(-1, -1, pos_embed.size(-1))
         tgt = [torch.zeros_like(query_embed) for _ in range(len(src))]
-        tgt = nestedtensor.nested_tensor(tgt)
+        tgt = nestedtensor.nested_tensor(tgt, device=src.device, dtype=src.dtype)
+        print("pos_embed.dtype: ", pos_embed.dtype)
+        print("pos_embed.device: ", pos_embed.device)
         memory = self.encoder(src, src_key_padding_mask=mask, pos=pos_embed)
 
         hs = self.decoder(tgt, memory, memory_key_padding_mask=mask,
@@ -146,6 +148,10 @@ class TransformerEncoderLayer(nn.Module):
         self.normalize_before = normalize_before
 
     def with_pos_embed(self, tensor, pos: Optional[Tensor]):
+        print("tensor.dtype: ", tensor.dtype)
+        print("tensor.device: ", tensor.device)
+        print("pos.dtype: ", pos.dtype)
+        print("pos.device: ", pos.device)
         return tensor if pos is None else tensor + pos
 
     def forward_post(self,

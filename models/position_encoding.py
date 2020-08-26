@@ -29,23 +29,34 @@ class PositionEmbeddingSine(nn.Module):
         not_mask = []
         for tensor in tensor_list:
             not_mask.append((torch.ones_like(tensor, dtype=torch.bool).prod(0)).bool())
-        not_mask = nestedtensor.nested_tensor(not_mask)
+        not_mask = nestedtensor.nested_tensor(not_mask, dtype=torch.bool, device=tensor.device)
+        print("10: ", not_mask.dtype)
+        print("11: ", not_mask.device)
         y_embed = not_mask.cumsum(1, dtype=torch.float32)
         x_embed = not_mask.cumsum(2, dtype=torch.float32)
         if self.normalize:
             eps = 1e-6
             y_embed = y_embed / (y_embed[:, -1:, :] + eps) * self.scale
             x_embed = x_embed / (x_embed[:, :, -1:] + eps) * self.scale
-        dim_t = torch.arange(self.num_pos_feats, dtype=torch.float32, device=tensor.device)
-        dim_t = nestedtensor.nested_tensor(len(tensor_list) * [dim_t])
+        dim_t = torch.arange(self.num_pos_feats)
+        dim_t = nestedtensor.nested_tensor(len(tensor_list) * [dim_t], dtype=torch.float32, device=tensor.device)
+        print("20: ", dim_t.dtype)
+        print("21: ", dim_t.device)
         dim_t = self.temperature ** (2 * (dim_t // 2) / self.num_pos_feats)
+        print("30: ", dim_t.dtype)
+        print("31: ", dim_t.device)
         pos_x = x_embed[:, :, :, None] / dim_t
         pos_y = y_embed[:, :, :, None] / dim_t
         pos = nestedtensor.cat((pos_y, pos_x), dim=3)
         pos_sin = pos[:, :, :, 0::2].sin()
         pos_cos = pos[:, :, :, 1::2].cos()
         res = nestedtensor.stack((pos_sin, pos_cos), dim=4)
-        return res.flatten(3)
+        print("40: ", res.dtype)
+        print("41: ", res.device)
+        res = res.flatten(3)
+        print("50: ", res.dtype)
+        print("51: ", res.device)
+        return res
 
 
 class PositionEmbeddingLearned(nn.Module):

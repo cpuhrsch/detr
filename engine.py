@@ -27,8 +27,8 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     print_freq = 10
 
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
-        samples = nestedtensor.nested_tensor(samples)
-        samples = samples.to(device)
+        samples = nestedtensor.nested_tensor(samples, device=device, requires_grad=True)
+        print('samples.requires_grad: ', samples.requires_grad)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
         outputs = model(samples)

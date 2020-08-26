@@ -57,9 +57,18 @@ class DETR(nn.Module):
                - "aux_outputs": Optional, only returned when auxilary losses are activated. It is a list of
                                 dictionnaries containing the two above keys for each decoder layer.
         """
+        print("0: ", samples.requires_grad)
         features, pos = self.backbone(samples)
+        print("1: ", features[-1].requires_grad)
+        print("2: ", pos[-1].requires_grad)
         input_proj_features = self.input_proj(features[-1])
+        print("00: ", pos[-1].dtype)
+        print("01: ", pos[-1].device)
+        print("00: ", pos[-1].dtype)
+        print("01: ", pos[-1].device)
+        print("3: ", input_proj_features.requires_grad)
         hs = self.transformer(input_proj_features, None, self.query_embed.weight, pos[-1])[0]
+        print("4: ", hs.requires_grad)
         outputs_class = self.class_embed(hs)
         outputs_coord = self.bbox_embed(hs).sigmoid()
         out = {'pred_logits': outputs_class[-1], 'pred_boxes': outputs_coord[-1]}
