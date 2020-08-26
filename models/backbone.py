@@ -97,14 +97,7 @@ class Joiner(nn.Sequential):
         pos = []
         for name, x in xs.items():
             out.append(x)
-            # position encoding
-            # print("type(x): ", type(x))
-            # print("self[1]: ", self[1])
-            a = self[1](x)
-            # print("a.dtype: ", a.dtype)
-            # print("a.device: ", a.device)
-            # a = a.to(x.dtype)
-            pos.append(a)
+            pos.append(self[1](x))
 
         return out, pos
 
