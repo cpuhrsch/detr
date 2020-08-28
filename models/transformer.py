@@ -58,7 +58,9 @@ class Transformer(nn.Module):
         hs = self.decoder(tgt, memory, memory_key_padding_mask=mask,
                           pos=pos_embed, query_pos=query_embed)
         # TODO: Accumulate memory and return
-        return torch.stack(tuple(h.to_tensor() for h in hs)), None
+        # TODO: to_tensor doesn't have grad support
+        rr = torch.stack(tuple(h.to_tensor() for h in hs))
+        return rr, None
 
 
 class TransformerEncoder(nn.Module):
@@ -153,10 +155,14 @@ class TransformerEncoderLayer(nn.Module):
                      src_mask: Optional[Tensor] = None,
                      src_key_padding_mask: Optional[Tensor] = None,
                      pos: Optional[Tensor] = None):
-        q = k = self.with_pos_embed(src, pos)
+        s = src.sum()
         src2 = self.self_attn(q, k, value=src, attn_mask=src_mask,
                               key_padding_mask=src_key_padding_mask,
                               need_weights=False)[0]
+        s = src2.sum()
+        print("4: ", s)
+        s.backward()
+        import sys; sys.exit(1)
         src = src + self.dropout1(src2)
         src = self.norm1(src)
         src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))

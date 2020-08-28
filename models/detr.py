@@ -58,6 +58,7 @@ class DETR(nn.Module):
                                 dictionnaries containing the two above keys for each decoder layer.
         """
         features, pos = self.backbone(samples)
+        s = features[-1].sum()
         input_proj_features = self.input_proj(features[-1])
         hs = self.transformer(input_proj_features, None, self.query_embed.weight, pos[-1])[0]
         outputs_class = self.class_embed(hs)
