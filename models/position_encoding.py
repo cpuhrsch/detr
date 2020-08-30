@@ -23,7 +23,7 @@ class PositionEmbeddingSine(nn.Module):
             raise ValueError("normalize should be True if scale is passed")
         if scale is None:
             scale = 2 * math.pi
-        self.scale = scale
+        self.scale = torch.tensor(scale, dtype=torch.float32)
 
     def forward(self, tensor_list):
         not_mask = []
@@ -33,7 +33,7 @@ class PositionEmbeddingSine(nn.Module):
         y_embed = not_mask.cumsum(1, dtype=torch.float32)
         x_embed = not_mask.cumsum(2, dtype=torch.float32)
         if self.normalize:
-            eps = 1e-6
+            eps = torch.tensor(1e-6, dtype=torch.float32)
             y_embed = y_embed / (y_embed[:, -1:, :] + eps) * self.scale
             x_embed = x_embed / (x_embed[:, :, -1:] + eps) * self.scale
         dim_t = torch.arange(self.num_pos_feats)
