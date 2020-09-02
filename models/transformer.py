@@ -57,7 +57,7 @@ class Transformer(nn.Module):
 
         hs = self.decoder(tgt, memory, memory_key_padding_mask=mask,
                           pos=pos_embed, query_pos=query_embed)
-        # TODO: Feature: Accumulate memory and return
+        # TODO: Feature: Reshape and return memory (is unused)
         return torch.stack(tuple(h.to_tensor() for h in hs)), None
 
 
