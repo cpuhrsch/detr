@@ -22,6 +22,29 @@ if float(torchvision.__version__[:3]) < 0.7:
     from torchvision.ops import _new_empty_tensor
     from torchvision.ops.misc import _output_size
 
+class SequentialSampler(torch.utils.data.Sampler):
+    r"""Samples elements sequentially, always in the same order.
+
+    Arguments:
+        data_source (Dataset): dataset to sample from
+    """
+
+    def __init__(self, data_source):
+        self.data_source = data_source
+        print("Computing indices")
+        sizes = [d[0].size() for d in data_source]
+        self.indices = torch.matmul(torch.tensor(sizes)[0], torch.tensor(sizes).t()).sort()[1].tolist()
+        print("Computed indices")
+
+    def __iter__(self):
+        yield from self.indices
+        # return iter(range(len(self.data_source)))
+
+    def __len__(self) -> int:
+        return len(self.data_source)
+
+
+
 
 class SmoothedValue(object):
     """Track a series of values and provide access to smoothed values over a
