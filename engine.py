@@ -27,7 +27,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     print_freq = 10
 
     for samples, targets in metric_logger.log_every(data_loader, print_freq, header):
-        samples = nestedtensor.nested_tensor(samples, device=device, requires_grad=True)
+        samples = nestedtensor.nested_tensor(samples, device=device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
         outputs = model(samples)
@@ -65,7 +65,7 @@ def train_one_epoch(model: torch.nn.Module, criterion: torch.nn.Module,
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 
-@torch.no_grad()
+@torch.inference_mode()
 def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, output_dir):
     model.eval()
     criterion.eval()
@@ -87,7 +87,7 @@ def evaluate(model, criterion, postprocessors, data_loader, base_ds, device, out
         )
 
     for samples, targets in metric_logger.log_every(data_loader, 10, header):
-        samples = nestedtensor.nested_tensor(samples, device=device, requires_grad=True)
+        samples = nestedtensor.nested_tensor(samples, device=device)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
         outputs = model(samples)
